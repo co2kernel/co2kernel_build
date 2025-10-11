@@ -1,0 +1,65 @@
+name: co2kernel_build
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Maximize build space
+        uses: easimon/maximize-build-space@master
+        with:
+          root-reserve-mb: 8192
+          temp-reserve-mb: 2048
+          remove-dotnet: 'true'
+          remove-android: 'true'
+          remove-haskell: 'true'
+          remove-codeql: 'true'
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "DogEZ"
+          git config --global user.email "DdogezD@gmail.com"
+
+      - name: Install dependencies
+        run: |
+          sudo apt update && sudo apt upgrade -y
+          sudo apt install -y python3 git curl
+
+      - name: Install repo tool
+        run: |
+          curl https://storage.googleapis.com/git-repo-downloads/repo > ~/repo
+          chmod a+x ~/repo
+          sudo mv ~/repo /usr/local/bin/repo
+
+      - name: Initialize repo and sync
+        run: |
+          mkdir kernel_workspace && cd kernel_workspace
+          repo init -u https://github.com/co2kernel/kernel_manifest.git -b refs/heads/oneplus/sm8550 -m oneplus_open_v.xml --depth=1
+          repo sync
+
+      - name: Add KernelSU Next latest
+        run: |
+          cd kernel_workspace/kernel_platform
+          curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh" | bash -
+          cd ./KernelSU-Next
+          MAKE_FILE="kernel/Makefile"
+          DEFAULT_VERSION=11998
+          KSU_VERSION=$(($(git rev-list --count HEAD) + 10200))
+          sed -i "s/^DKSU_VERSION.*/DKSU_VERSION=${KSU_VERSION}/" "${MAKE_FILE}"
+
+      - name: Build kernel
+        run: |
+          cd kernel_workspace
+          LTO=thin ./kernel_platform/oplus/build/oplus_build_kernel.sh kalama gki
+
+      - name: Prepare Kernel
+        run: |
+         cp kernel_workspace/kernel_platform/out/msm-kernel-kalama-gki/dist/Image ./kernel_workspace/kernel
+
+      - name: Upload Image
+        uses: actions/upload-artifact@v4
+        with:
+         name: co2kernel
+         path: kernel_workspace/kernel
