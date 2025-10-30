@@ -10,6 +10,11 @@ on:
         description: "自定义 UTS_VERSION 时间戳"
         required: true
         default: "#1 SMP PREEMPT Thu Sep 4 03:07:39 UTC 2025"
+      LXC:
+        type: boolean
+        description: "启用 LXC 支持"
+        required: true
+        default: false
 
 jobs:
   build:
@@ -47,6 +52,18 @@ jobs:
           mkdir kernel_workspace && cd kernel_workspace
           repo init -u https://github.com/co2kernel/kernel_manifest.git -b refs/heads/oneplus/sm8550 -m oneplus_open_v.xml --depth=1
           repo sync
+
+      - name: Add co2kernel features
+        run: |
+          cd kernel_workspace
+          git clone https://github.com/co2kernel/co2kernel_build.git build
+          cd kernel_platform/common
+          cp ../../build/patch/*.patch ./
+          if [ "${{ github.event.inputs.LXC }}" = "true" ]; then
+            patch -p1 < co2kernel_LXC_support.patch || true
+            patch -p1 < co2kernel_revert_defconfig_spoofer.patch || true
+            echo "已启用 LXC 支持"
+          fi
 
       - name: Add KernelSU Next latest
         run: |

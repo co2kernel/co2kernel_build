@@ -1,0 +1,195 @@
+From 7449c8db89d2183cfb85146a161ed251ab3e2856 Mon Sep 17 00:00:00 2001
+From: DogEZ <ddogezd@gmail.com>
+Date: Mon, 27 Oct 2025 09:29:52 +0800
+Subject: [PATCH] treewide: add LXC support
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+credit to CoolAPK @六道纸花
+---
+ arch/arm64/configs/gki_defconfig | 52 ++++++++++++++++++++++++++++++--
+ fs/overlayfs/util.c              |  4 +--
+ include/linux/netdevice.h        |  8 +++--
+ include/linux/sched.h            | 12 ++++++--
+ kernel/cgroup/cgroup.c           |  5 +++
+ kernel/module.c                  |  2 +-
+ 6 files changed, 73 insertions(+), 10 deletions(-)
+
+diff --git a/arch/arm64/configs/gki_defconfig b/arch/arm64/configs/gki_defconfig
+index f750f9aa5a874..5c7136af9751f 100644
+--- a/arch/arm64/configs/gki_defconfig
++++ b/arch/arm64/configs/gki_defconfig
+@@ -31,7 +31,6 @@ CONFIG_CPUSETS=y
+ CONFIG_CGROUP_CPUACCT=y
+ CONFIG_CGROUP_BPF=y
+ CONFIG_NAMESPACES=y
+-# CONFIG_PID_NS is not set
+ CONFIG_RT_SOFTINT_OPTIMIZATION=y
+ CONFIG_RELAY=y
+ # CONFIG_RD_BZIP2 is not set
+@@ -40,7 +39,6 @@ CONFIG_RELAY=y
+ # CONFIG_RD_LZO is not set
+ CONFIG_BOOT_CONFIG=y
+ # CONFIG_SYSFS_SYSCALL is not set
+-# CONFIG_FHANDLE is not set
+ CONFIG_CC_OPTIMIZE_FOR_PERFORMANCE_O3=y
+ CONFIG_KALLSYMS_ALL=y
+ CONFIG_USERFAULTFD=y
+@@ -723,3 +721,53 @@ CONFIG_PID_IN_CONTEXTIDR=y
+ CONFIG_FUNCTION_ERROR_INJECTION=y
+ # CONFIG_RUNTIME_TESTING_MENU is not set
+ CONFIG_KSU_KPROBES_HOOK=n
++CONFIG_POSIX_MQUEUE=y
++CONFIG_PID_NS=y
++CONFIG_SYSVIPC=y
++CONFIG_IPC_NS=y
++CONFIG_CGROUP_DEVICE=y
++CONFIG_BRIDGE_NETFILTER=y
++CONFIG_NF_NAT_IPV4=y
++CONFIG_NETFILTER_XT_MATCH_ADDRTYPE=y
++CONFIG_NF_NAT_NEEDED=y
++CONFIG_USER_NS=y
++CONFIG_CGROUP_PIDS=y
++CONFIG_CFQ_GROUP_IOSCHED=y
++CONFIG_NET_CLS_CGROUP=y
++CONFIG_IP_SCTP=y
++CONFIG_IP_VS=y
++CONFIG_IP_VS_PROTO_TCP=y
++CONFIG_IP_VS_PROTO_UDP=y
++CONFIG_IP_VS_NFCT=y
++CONFIG_VXLAN=y
++CONFIG_MACVLAN=y
++CONFIG_DEVPTS_MULTIPLE_INSTANCES=y
++CONFIG_NETFILTER_XT_MATCH_IPVS=y
++CONFIG_IP_VS_RR=y
++CONFIG_IP6_NF_NAT=y
++CONFIG_IP6_NF_TARGET_MASQUERADE=y
++CONFIG_SECURITY_APPARMOR=y
++CONFIG_NETFILTER_XT_TARGET_CHECKSUM=y
++CONFIG_FHANDLE=y
++CONFIG_UNIX_DIAG=y
++CONFIG_PACKET_DIAG=y
++CONFIG_NETLINK_DIAG=y
++CONFIG_NETFILTER_XT_MATCH_CGROUP=y
++CONFIG_RESOURCE_COUNTERS=y
++CONFIG_IOSCHED_CFQ=y
++CONFIG_CGROUP_PERF=y
++CONFIG_MEMCG_SWAP_ENABLED=y
++CONFIG_XFRM_ALGO=y
++CONFIG_AUFS_FS=y
++CONFIG_BTRFS_FS=y
++CONFIG_BTRFS_FS_POSIX_ACL=y
++CONFIG_DM_THIN_PROVISIONING=y
++CONFIG_NF_CONNMARK_IPV4=y
++CONFIG_NF_NAT_MASQUERADE_IPV4=y
++CONFIG_CGROUP_NET_CLASSID=y
++CONFIG_PERSISTENT_KEYRINGS=y
++CONFIG_ENCRYPTED_KEYS=y
++CONFIG_KEY_DH_OPERATIONS=y
++#CONFIG_NET_L3_MASTER_DEV is not set
++CONFIG_BRIDGE_VLAN_FILTERING=y
++CONFIG_IPVLAN=y
+diff --git a/fs/overlayfs/util.c b/fs/overlayfs/util.c
+index 4d39d77de4033..27b802bc7bc3d 100644
+--- a/fs/overlayfs/util.c
++++ b/fs/overlayfs/util.c
+@@ -145,9 +145,7 @@ void ovl_dentry_init_flags(struct dentry *dentry, struct dentry *upperdentry,
+ bool ovl_dentry_weird(struct dentry *dentry)
+ {
+ 	return dentry->d_flags & (DCACHE_NEED_AUTOMOUNT |
+-				  DCACHE_MANAGE_TRANSIT |
+-				  DCACHE_OP_HASH |
+-				  DCACHE_OP_COMPARE);
++				  DCACHE_MANAGE_TRANSIT);
+ }
+ 
+ enum ovl_path_type ovl_path_type(struct dentry *dentry)
+diff --git a/include/linux/netdevice.h b/include/linux/netdevice.h
+index cc9d2358c35f0..f2a55806cc0e4 100644
+--- a/include/linux/netdevice.h
++++ b/include/linux/netdevice.h
+@@ -2078,7 +2078,7 @@ struct net_device {
+ #endif
+ 	const struct ethtool_ops *ethtool_ops;
+ #ifdef CONFIG_NET_L3_MASTER_DEV
+-	const struct l3mdev_ops	*l3mdev_ops;
++//	const struct l3mdev_ops	*l3mdev_ops;
+ #endif
+ #if IS_ENABLED(CONFIG_IPV6)
+ 	const struct ndisc_ops *ndisc_ops;
+@@ -2322,7 +2322,11 @@ struct net_device {
+ 	ANDROID_KABI_RESERVE(5);
+ 	ANDROID_KABI_RESERVE(6);
+ 	ANDROID_KABI_RESERVE(7);
+-	ANDROID_KABI_RESERVE(8);
++#if defined(CONFIG_NET_L3_MASTER_DEV)
++	ANDROID_KABI_USE(8, const struct l3mdev_ops	*l3mdev_ops;);
++#else
++  	ANDROID_KABI_RESERVE(8);
++#endif
+ };
+ #define to_net_dev(d) container_of(d, struct net_device, dev)
+ 
+diff --git a/include/linux/sched.h b/include/linux/sched.h
+index b275cd2851827..dd3101f7963eb 100644
+--- a/include/linux/sched.h
++++ b/include/linux/sched.h
+@@ -1074,8 +1074,8 @@ struct task_struct {
+ 	struct nameidata		*nameidata;
+ 
+ #ifdef CONFIG_SYSVIPC
+-	struct sysv_sem			sysvsem;
+-	struct sysv_shm			sysvshm;
++//	struct sysv_sem			sysvsem;
++//	struct sysv_shm			sysvshm;
+ #endif
+ #ifdef CONFIG_DETECT_HUNG_TASK
+ 	unsigned long			last_switch_count;
+@@ -1508,9 +1508,17 @@ struct task_struct {
+ 	struct callback_head		l1d_flush_kill;
+ #endif
+ 
++#if defined(CONFIG_SYSVIPC)
++	// struct sysv_sem			sysvsem;
++	ANDROID_KABI_USE(1, struct sysv_sem sysvsem);
++	// struct sysv_shm			sysvshm;
++	_ANDROID_KABI_REPLACE(ANDROID_KABI_RESERVE(2); ANDROID_KABI_RESERVE(3),
++						  struct sysv_shm sysvshm);
++#else
+ 	ANDROID_KABI_RESERVE(1);
+ 	ANDROID_KABI_RESERVE(2);
+ 	ANDROID_KABI_RESERVE(3);
++#endif
+ 	ANDROID_KABI_RESERVE(4);
+ 	ANDROID_KABI_RESERVE(5);
+ 	ANDROID_KABI_RESERVE(6);
+diff --git a/kernel/cgroup/cgroup.c b/kernel/cgroup/cgroup.c
+index b355ecea80cce..8d5f4727add6c 100644
+--- a/kernel/cgroup/cgroup.c
++++ b/kernel/cgroup/cgroup.c
+@@ -4103,6 +4103,11 @@ static int cgroup_add_file(struct cgroup_subsys_state *css, struct cgroup *cgrp,
+ 		spin_unlock_irq(&cgroup_file_kn_lock);
+ 	}
+ 
++	if (cft->ss && (cgrp->root->flags & CGRP_ROOT_NOPREFIX) && !(cft->flags & CFTYPE_NO_PREFIX)) {
++				snprintf(name, CGROUP_FILE_NAME_MAX, "%s.%s", cft->ss->name, cft->name);
++				kernfs_create_link(cgrp->kn, name, kn);
++	}
++
+ 	return 0;
+ }
+ 
+diff --git a/kernel/module.c b/kernel/module.c
+index bcadcef319dcc..3794f311ba02c 100644
+--- a/kernel/module.c
++++ b/kernel/module.c
+@@ -1289,7 +1289,7 @@ static int check_version(const struct load_info *info,
+ bad_version:
+ 	pr_warn("%s: disagrees about version of symbol %s\n",
+ 	       info->name, symname);
+-	return 0;
++	return 1;
+ }
+ 
+ static inline int check_modstruct_version(const struct load_info *info,
