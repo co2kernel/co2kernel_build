@@ -95,12 +95,20 @@ jobs:
           cd kernel_workspace
           LTO=thin ./kernel_platform/oplus/build/oplus_build_kernel.sh kalama gki
 
-      - name: Prepare Kernel
+      - name: Make AnyKernel3
         run: |
-         cp kernel_workspace/kernel_platform/out/msm-kernel-kalama-gki/dist/Image ./kernel_workspace/kernel
+         git clone https://github.com/Kernel-SU/AnyKernel3 --depth=1
+         rm -rf ./AnyKernel3/.git
+         cp kernel_workspace/kernel_platform/out/msm-kernel-kalama-gki/dist/Image ./AnyKernel3/
 
-      - name: Upload Image
+      - name: Upload AnyKernel3
+        uses: actions/upload-artifact@v4
+        with:
+         name: co2kernel_ak3
+         path: ./AnyKernel3/*
+
+      - name: Upload kernel image
         uses: actions/upload-artifact@v4
         with:
          name: co2kernel
-         path: kernel_workspace/kernel
+         path: kernel_workspace/kernel_platform/out/msm-kernel-kalama-gki/dist/Image
