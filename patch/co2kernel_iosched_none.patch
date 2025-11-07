@@ -1,0 +1,25 @@
+From 8139bca76b50fc4c17be0e6d104771fecb2848e3 Mon Sep 17 00:00:00 2001
+From: DogEZ <ddogezd@gmail.com>
+Date: Sat, 8 Nov 2025 02:40:54 +0800
+Subject: [PATCH] block: use "none" as default I/O scheduler
+
+---
+ block/elevator.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/block/elevator.c b/block/elevator.c
+index 9eebe5fa65c6b..7f1ea8c75ac36 100644
+--- a/block/elevator.c
++++ b/block/elevator.c
+@@ -638,7 +638,7 @@ static struct elevator_type *elevator_get_default(struct request_queue *q)
+ 			!blk_mq_is_sbitmap_shared(q->tag_set->flags))
+ 		return NULL;
+ 
+-	return elevator_get(q, "ssg", false);
++	return elevator_get(q, "none", false);
+ }
+ 
+ /*
+-- 
+2.34.1
+
