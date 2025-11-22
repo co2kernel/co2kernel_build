@@ -1,0 +1,76 @@
+name: co2kernel_16_build
+on:
+  workflow_dispatch:
+    inputs:
+      DMESG_BUFFER_2M:
+        type: boolean
+        description: "启用 2M dmesg 缓冲区"
+        required: true
+        default: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Maximize build space
+        uses: easimon/maximize-build-space@master
+        with:
+          root-reserve-mb: 8192
+          temp-reserve-mb: 2048
+          remove-dotnet: 'true'
+          remove-android: 'true'
+          remove-haskell: 'true'
+          remove-codeql: 'true'
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "DogEZ"
+          git config --global user.email "DdogezD@gmail.com"
+
+      - name: Install dependencies
+        run: |
+          sudo apt update && sudo apt upgrade -y
+          sudo apt install -y python3 git curl
+
+      - name: Install repo tool
+        run: |
+          curl https://storage.googleapis.com/git-repo-downloads/repo > ~/repo
+          chmod a+x ~/repo
+          sudo mv ~/repo /usr/local/bin/repo
+
+      - name: Initialize repo and sync
+        run: |
+          mkdir kernel_workspace && cd kernel_workspace
+          repo init -u https://github.com/co2kernel/kernel_manifest.git -b refs/heads/oneplus/sm8550 -m oneplus_open_b.xml --depth=1
+          repo sync
+
+      - name: Add Debug flavors
+        run: |
+          cd kernel_workspace/kernel_platform/common
+          if [ "${{ github.event.inputs.DMESG_BUFFER_2M }}" = "true" ]; then
+          echo "CONFIG_LOG_BUF_SHIFT=21" >> "./arch/arm64/configs/gki_defconfig"
+          fi
+
+      - name: Build kernel
+        run: |
+          cd kernel_workspace
+          LTO=thin ./kernel_platform/oplus/build/oplus_build_kernel.sh kalama gki
+
+      - name: Make AnyKernel3
+        run: |
+         git clone https://github.com/co2kernel/AnyKernel3 --depth=1
+         rm -rf ./AnyKernel3/.git
+         cp kernel_workspace/kernel_platform/out/msm-kernel-kalama-gki/dist/Image ./AnyKernel3/
+
+      - name: Upload AnyKernel3
+        uses: actions/upload-artifact@v4
+        with:
+         name: co2kernel_ak3
+         path: ./AnyKernel3/*
+
+      - name: Upload kernel image
+        uses: actions/upload-artifact@v4
+        with:
+         name: co2kernel
+         path: kernel_workspace/kernel_platform/out/msm-kernel-kalama-gki/dist/Image
