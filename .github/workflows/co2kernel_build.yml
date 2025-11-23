@@ -53,7 +53,7 @@ jobs:
           repo init -u https://github.com/co2kernel/kernel_manifest.git -b refs/heads/oneplus/sm8550 -m oneplus_open_v.xml --depth=1
           repo sync
 
-      - name: Add KernelSU Next + SUS_FS
+      - name: Add KernelSU Next + SUSFS
         run: |
           cd kernel_workspace/kernel_platform
           curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh" | bash -
