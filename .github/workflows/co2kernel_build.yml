@@ -81,6 +81,7 @@ jobs:
           patch -p1 --forward < "../../co2kernel_susfs/kernel_patches/next/fix_kernel_compat.c.patch"
           cd ..
           echo "CONFIG_KSU_SUSFS=y" >> "./common/arch/arm64/configs/gki_defconfig"
+          echo "CONFIG_KSU_SUSFS_SUS_SU=n" >> "./common/arch/arm64/configs/gki_defconfig"
           echo "CONFIG_KSU_SUSFS_HAS_MAGIC_MOUNT=y" >> "./common/arch/arm64/configs/gki_defconfig"
           echo "CONFIG_KSU_SUSFS_SUS_PATH=y" >> "./common/arch/arm64/configs/gki_defconfig"
           echo "CONFIG_KSU_SUSFS_SUS_MOUNT=y" >> "./common/arch/arm64/configs/gki_defconfig"
