@@ -72,7 +72,7 @@ jobs:
           patch -p1 < 50_add_susfs_in_gki-android13-5.15.patch || true
           cd ..
           cd ./KernelSU-Next
-          cp ../../../co2kernel_susfs/kernel_patches/next/10_enable_susfs_for_ksu.patch ./
+          cp ../../co2kernel_susfs/kernel_patches/next/10_enable_susfs_for_ksu.patch ./
           patch -p1 --forward < 10_enable_susfs_for_ksu.patch  || true
           for file in $(find ./kernel -maxdepth 2 -name "*.rej" -printf "%f\n" | cut -d'.' -f1); do
             echo "Patching file: $file.c with fix_$file.c.patch"
