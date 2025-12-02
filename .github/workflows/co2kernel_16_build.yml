@@ -2,16 +2,19 @@ name: co2kernel_16_build
 on:
   workflow_dispatch:
     inputs:
+      KERNEL_NAME:
+        description: "自定义 Linux version"
+        required: true
+        default: "-android13-8-o-01154-gf7540e130d00"
+      UTS_VERSION:
+        description: "自定义 UTS_VERSION 时间戳"
+        required: true
+        default: "#1 SMP PREEMPT Thu Oct 23 16:30:45 UTC 2025"
       DMESG_BUFFER_2M:
         type: boolean
         description: "启用 2M dmesg 缓冲区"
         required: true
         default: false
-      KSU_SUSFS:
-        type: boolean
-        description: "启用 KernelSU + SUSFS 集成"
-        required: true
-        default: true
 
 jobs:
   build:
@@ -59,46 +62,18 @@ jobs:
           rm -rf ./drivers/of/overwriter/tools
           rm -f ./drivers/of/overwriter/README.md
 
-      - name: Add KernelSU + SUS_FS
-        if: ${{ fromJSON(github.event.inputs.KSU_SUSFS) }}
-        run: |
-          cd kernel_workspace/kernel_platform
-          curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -s main
-          cd ..
-          git clone https://gitlab.com/simonpunk/susfs4ksu.git -b gki-android13-5.15
-          cd kernel_platform
-          cp ../susfs4ksu/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch ./KernelSU/
-          cp ../susfs4ksu/kernel_patches/50_add_susfs_in_gki-android13-5.15.patch ./common/
-          cp ../susfs4ksu/kernel_patches/fs/* ./common/fs/
-          cp ../susfs4ksu/kernel_patches/include/linux/* ./common/include/linux/
-          cd ./KernelSU
-          patch -p1 < 10_enable_susfs_for_ksu.patch
-          cd ..
-          cd ./common
-          patch -p1 < 50_add_susfs_in_gki-android13-5.15.patch || true
-          cd ..
-          echo "CONFIG_KSU_SUSFS=y" >> "./common/arch/arm64/configs/gki_defconfig"
-          echo "CONFIG_KSU_SUSFS_HAS_MAGIC_MOUNT=y" >> "./common/arch/arm64/configs/gki_defconfig"
-          echo "CONFIG_KSU_SUSFS_SUS_PATH=y" >> "./common/arch/arm64/configs/gki_defconfig"
-          echo "CONFIG_KSU_SUSFS_SUS_MOUNT=y" >> "./common/arch/arm64/configs/gki_defconfig"
-          echo "CONFIG_KSU_SUSFS_AUTO_ADD_SUS_KSU_DEFAULT_MOUNT=y" >> "./common/arch/arm64/configs/gki_defconfig"
-          echo "CONFIG_KSU_SUSFS_AUTO_ADD_SUS_BIND_MOUNT=y" >> "./common/arch/arm64/configs/gki_defconfig"
-          echo "CONFIG_KSU_SUSFS_SUS_KSTAT=y" >> "./common/arch/arm64/configs/gki_defconfig"
-          echo "CONFIG_KSU_SUSFS_SUS_OVERLAYFS=n" >> "./common/arch/arm64/configs/gki_defconfig"
-          echo "CONFIG_KSU_SUSFS_TRY_UMOUNT=y" >> "./common/arch/arm64/configs/gki_defconfig"
-          echo "CONFIG_KSU_SUSFS_AUTO_ADD_TRY_UMOUNT_FOR_BIND_MOUNT=y" >> "./common/arch/arm64/configs/gki_defconfig"
-          echo "CONFIG_KSU_SUSFS_SPOOF_UNAME=y" >> "./common/arch/arm64/configs/gki_defconfig"
-          echo "CONFIG_KSU_SUSFS_ENABLE_LOG=y" >> "./common/arch/arm64/configs/gki_defconfig"
-          echo "CONFIG_KSU_SUSFS_HIDE_KSU_SUSFS_SYMBOLS=y" >> "./common/arch/arm64/configs/gki_defconfig"
-          echo "CONFIG_KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG=y" >> "./common/arch/arm64/configs/gki_defconfig"
-          echo "CONFIG_KSU_SUSFS_OPEN_REDIRECT=y" >> "./common/arch/arm64/configs/gki_defconfig"
-
       - name: Add Debug flavors
         run: |
           cd kernel_workspace/kernel_platform/common
           if [ "${{ fromJSON(github.event.inputs.DMESG_BUFFER_2M) }}" = "true" ]; then
               echo "CONFIG_LOG_BUF_SHIFT=21" >> "./common/arch/arm64/configs/gki_defconfig"
           fi
+
+      - name: Spoof Linux version
+        run: |
+          cd kernel_workspace/kernel_platform
+          sed -i '$s|echo "\$res"|echo "\${{ github.event.inputs.KERNEL_NAME }}"|' ./common/scripts/setlocalversion
+          sed -i '/UTS_VERSION=.*cut -b -\$UTS_LEN)/s#UTS_VERSION=.*#UTS_VERSION="\${{ github.event.inputs.UTS_VERSION }}"#' ./common/scripts/mkcompile_h
 
       - name: Build kernel
         run: |
