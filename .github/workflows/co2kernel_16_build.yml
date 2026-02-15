@@ -5,11 +5,11 @@ on:
       KERNEL_NAME:
         description: "自定义 Linux version"
         required: true
-        default: "-android13-8-o-01174-g3cf19d94fc50"
+        default: "-android13-8-o-01176-g6333b0dbc8ed"
       UTS_VERSION:
         description: "自定义 UTS_VERSION 时间戳"
         required: true
-        default: "#1 SMP PREEMPT Wed Dec 10 12:07:30 UTC 2025"
+        default: "#1 SMP PREEMPT Fri Dec 12 11:37:03 UTC 2025"
       DMESG_BUFFER_2M:
         type: boolean
         description: "启用 2M dmesg 缓冲区"
