@@ -15,6 +15,11 @@ on:
         description: "启用 2M dmesg 缓冲区"
         required: true
         default: false
+      ENABLE_LXC_SUPPORT:
+        type: boolean
+        description: "启用 LXC/Droidspaces 容器支持"
+        required: true
+        default: false
 
 jobs:
   build:
@@ -74,6 +79,12 @@ jobs:
           cd kernel_workspace/kernel_platform
           sed -i '$s|echo "\$res"|echo "\${{ github.event.inputs.KERNEL_NAME }}"|' ./common/scripts/setlocalversion
           sed -i '/UTS_VERSION=.*cut -b -\$UTS_LEN)/s#UTS_VERSION=.*#UTS_VERSION="\${{ github.event.inputs.UTS_VERSION }}"#' ./common/scripts/mkcompile_h
+
+      - name: Apply LXC/Droidspaces support patch
+        if: github.event.inputs.ENABLE_LXC_SUPPORT == 'true'
+        run: |
+          cd kernel_workspace/kernel_platform/common
+          patch -p1 < ${{ github.workspace }}/patch/co2kernel_LXC_support.patch
 
       - name: Build kernel
         run: |
